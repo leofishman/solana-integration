@@ -4,7 +4,7 @@ Provides integration with the Solana blockchain: configurable JSON-RPC client, s
 
 ## Requirements
 - Drupal 10 or 11
-- PHP 8.1+
+- PHP 8.3+
 
 ## Installation
 1. Place this module under `web/modules/custom/solana_integration` (or appropriate module path).
