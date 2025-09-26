@@ -1,0 +1,10 @@
+solana_integration.settings:
+  type: config_object
+  label: 'Solana Integration settings'
+  mapping:
+    rpc_endpoint:
+      type: string
+      label: 'RPC endpoint URL'
+    request_timeout:
+      type: integer
+      label: 'Request timeout (seconds)'
