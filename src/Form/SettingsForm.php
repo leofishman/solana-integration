@@ -5,6 +5,9 @@ namespace Drupal\solana_integration\Form;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
 
+/**
+ * Configure Solana Integration settings for this site.
+ */
 class SettingsForm extends ConfigFormBase {
 
   protected function getEditableConfigNames() {
