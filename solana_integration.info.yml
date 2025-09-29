@@ -19,4 +19,4 @@ test_dependencies:
   - drupal:system
 
 # PHP requirements
-php: 8.3
+php: 8.2

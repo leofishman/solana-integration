@@ -1,6 +1,6 @@
 solana_integration.balance_check:
   title: 'Check Balance'
   description: 'Check the SOL balance of a Solana account.'
-  parent: system.admin_config_services
+  menu_name: main
   route_name: solana_integration.balance_check
   weight: 100
