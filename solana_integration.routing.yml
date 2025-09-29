@@ -5,3 +5,11 @@ solana_integration.settings:
     _title: 'Solana Integration settings'
   requirements:
     _permission: 'administer site configuration'
+
+solana_integration.balance_check:
+  path: '/solana_integration/balance'
+  defaults:
+    _form: '\Drupal\solana_integration\Form\BalanceCheckForm'
+    _title: 'Check Account Balance'
+  requirements:
+    _permission: 'access content'

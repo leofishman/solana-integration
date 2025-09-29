@@ -1,5 +1,5 @@
 services:
   solana_integration.client:
     class: Drupal\solana_integration\Service\SolanaClient
-    arguments: ['@http_client', '@config.factory']
+    arguments: ['@config.factory']
     public: true

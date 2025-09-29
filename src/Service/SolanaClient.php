@@ -2,54 +2,68 @@
 
 namespace Drupal\solana_integration\Service;
 
-use GuzzleHttp\ClientInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
+//use JosephOpanel\SolanaSDK\Connection;
+use JosephOpanel\SolanaSDK\SolanaRPC;
+use JosephOpanel\SolanaSDK\Endpoints\JsonRPC\Account;
+use JosephOpanel\SolanaSDK\Endpoints\JsonRPC\Block;
+use JosephOpanel\SolanaSDK\Endpoints\JsonRPC\Transaction;
 
 /**
- * Simple Solana JSON-RPC client wrapper.
+ * A wrapper for the Solana PHP SDK, configured via Drupal services.
  */
 class SolanaClient {
 
+  /**
+   * The Solana RPC service.
+   *
+   * @var \JosephOpanel\SolanaSDK\SolanaRPC
+   */
+  // protected SolanaRPC $rpc = new SolanaRPC();
+
+
+  /**
+   * The Solana SDK connection object.
+   *
+   * @var \JosephOpanel\SolanaSDK\Connection
+   */
+  // protected Connection $connection;
+
+  /**
+   * Constructs a new SolanaClient object.
+   *
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $configFactory
+   *   The config factory.
+   */
   public function __construct(
-    private readonly ClientInterface $httpClient,
     private readonly ConfigFactoryInterface $configFactory,
-  ) {}
-
-  protected function getEndpoint(): string {
-    return (string) $this->configFactory->get('solana_integration.settings')->get('rpc_endpoint');
-  }
-
-  protected function getTimeout(): int {
-    return (int) ($this->configFactory->get('solana_integration.settings')->get('request_timeout') ?? 5);
+  ) {
+    $endpoint = (string) $this->configFactory->get('solana_integration.settings')->get('rpc_endpoint');
+    // $this->connection = new Connection($endpoint);
   }
 
   /**
-   * Perform a JSON-RPC call to the Solana endpoint.
-   *
-   * @param string $method
-   *   The JSON-RPC method name.
-   * @param array $params
-   *   Parameters for the method.
-   *
-   * @return array
-   *   Decoded JSON response as an associative array.
+   * Provides direct access to the underlying SDK connection object.
    */
-  public function rpc(string $method, array $params = []): array {
-    $payload = [
-      'jsonrpc' => '2.0',
-      'id' => 1,
-      'method' => $method,
-      'params' => $params,
-    ];
+  public function getConnection(): Connection {
+    return $this->connection;
+  }
 
-    $response = $this->httpClient->request('POST', $this->getEndpoint(), [
-      'timeout' => $this->getTimeout(),
-      'headers' => [
-        'Content-Type' => 'application/json',
-      ],
-      'body' => json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-    ]);
-
-    return json_decode((string) $response->getBody(), TRUE) ?? [];
+  /**
+   * Get the balance of a Solana account.
+   *
+   * @param string $pubkey
+   *   The public key of the account.
+   *
+   * @return array|null The balance in lamports, or null on error.
+   */
+  public function getBalance(string $pubkey): ?array {
+    $rpc = new SolanaRPC();
+    $account = new Account($rpc);
+    $block = new Block($rpc);
+    $transaction = new Transaction($rpc);
+    // Get the balance of an account
+    $balance = $account->getBalance($pubkey, $block->getLatestBlockhash()['value']['blockhash'] ?? 'finalized');
+    return $balance;
   }
 }
