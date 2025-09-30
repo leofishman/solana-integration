@@ -3,7 +3,6 @@
 namespace Drupal\solana_integration\Service;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
-//use JosephOpanel\SolanaSDK\Connection;
 use JosephOpanel\SolanaSDK\SolanaRPC;
 use JosephOpanel\SolanaSDK\Endpoints\JsonRPC\Account;
 use JosephOpanel\SolanaSDK\Endpoints\JsonRPC\Block;
@@ -21,13 +20,14 @@ class SolanaClient {
    */
   // protected SolanaRPC $rpc = new SolanaRPC();
 
-
+  
   /**
-   * The Solana SDK connection object.
+   * The Solana RPC endpoint.
    *
-   * @var \JosephOpanel\SolanaSDK\Connection
+   * @var string
    */
-  // protected Connection $connection;
+  protected string $endpoint;
+
 
   /**
    * Constructs a new SolanaClient object.
@@ -38,16 +38,16 @@ class SolanaClient {
   public function __construct(
     private readonly ConfigFactoryInterface $configFactory,
   ) {
-    $endpoint = (string) $this->configFactory->get('solana_integration.settings')->get('rpc_endpoint');
+    $this->endpoint = (string) $this->configFactory->get('solana_integration.settings')->get('rpc_endpoint');
     // $this->connection = new Connection($endpoint);
   }
 
   /**
    * Provides direct access to the underlying SDK connection object.
    */
-  public function getConnection(): Connection {
-    return $this->connection;
-  }
+  // public function getConnection(): Connection {
+  //   return $this->connection;
+  // }
 
   /**
    * Get the balance of a Solana account.
@@ -58,7 +58,7 @@ class SolanaClient {
    * @return array|null The balance in lamports, or null on error.
    */
   public function getBalance(string $pubkey): ?array {
-    $rpc = new SolanaRPC();
+    $rpc = new SolanaRPC($this->endpoint);
     $account = new Account($rpc);
     $block = new Block($rpc);
     $transaction = new Transaction($rpc);
