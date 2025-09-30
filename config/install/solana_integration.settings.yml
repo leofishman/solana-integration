@@ -12,4 +12,3 @@ endpoints:
     url: 'https://api.testnet.solana.com'
     enabled: false
 default_endpoint: 'mainnet'
-request_timeout: 5

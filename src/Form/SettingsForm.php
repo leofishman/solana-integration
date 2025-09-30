@@ -135,14 +135,6 @@ class SettingsForm extends ConfigFormBase {
       '#default_value' => TRUE,
     ];
 
-    $form['request_timeout'] = [
-      '#type' => 'number',
-      '#title' => $this->t('Request timeout (seconds)'),
-      '#default_value' => $config->get('request_timeout') ?? 5,
-      '#min' => 1,
-      '#required' => TRUE,
-    ];
-
     return parent::buildForm($form, $form_state);
   }
 
@@ -265,7 +257,6 @@ class SettingsForm extends ConfigFormBase {
     $config
       ->set('endpoints', $endpoints)
       ->set('default_endpoint', $form_state->getValue('default_endpoint'))
-      ->set('request_timeout', (int) $form_state->getValue('request_timeout'))
       ->save();
   }
 }
