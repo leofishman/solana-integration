@@ -10,9 +10,6 @@ solana_integration.settings:
     default_endpoint:
       type: string
       label: 'Default endpoint key'
-    request_timeout:
-      type: integer
-      label: 'Request timeout (seconds)'
 
 solana_integration.endpoint:
   type: mapping
