@@ -67,9 +67,11 @@ class SettingsForm extends ConfigFormBase {
     ];
 
     foreach ($endpoints as $key => $endpoint) {
+      $is_custom = !empty($endpoint['custom']);
+      
       $form['endpoint_management'][$key] = [
         '#type' => 'fieldset',
-        '#title' => $endpoint['name'],
+        '#title' => $endpoint['name'] . ($is_custom ? ' ' . $this->t('[Custom]') : ''),
         '#collapsible' => TRUE,
         '#collapsed' => TRUE,
       ];
@@ -88,7 +90,54 @@ class SettingsForm extends ConfigFormBase {
         '#required' => TRUE,
         '#description' => $this->t('The JSON-RPC endpoint URL.'),
       ];
+
+      // Add delete button for custom endpoints.
+      if ($is_custom) {
+        $form['endpoint_management'][$key]['delete'] = [
+          '#type' => 'checkbox',
+          '#title' => $this->t('Delete this endpoint'),
+          '#default_value' => FALSE,
+        ];
+      }
     }
+
+    // Add custom endpoint section.
+    $form['add_custom_endpoint'] = [
+      '#type' => 'fieldset',
+      '#title' => $this->t('Add Custom Endpoint'),
+      '#description' => $this->t('Add a new custom RPC endpoint.'),
+      '#collapsible' => TRUE,
+      '#collapsed' => FALSE,
+    ];
+
+    $form['add_custom_endpoint']['custom_endpoint_key'] = [
+      '#type' => 'machine_name',
+      '#title' => $this->t('Endpoint machine name'),
+      '#description' => $this->t('A unique machine-readable name for this endpoint. Use lowercase letters, numbers, and underscores only.'),
+      '#machine_name' => [
+        'exists' => [$this, 'endpointExists'],
+        'source' => ['add_custom_endpoint', 'custom_endpoint_name'],
+      ],
+      '#required' => FALSE,
+    ];
+
+    $form['add_custom_endpoint']['custom_endpoint_name'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Endpoint name'),
+      '#description' => $this->t('A human-readable name for this endpoint.'),
+    ];
+
+    $form['add_custom_endpoint']['custom_endpoint_url'] = [
+      '#type' => 'url',
+      '#title' => $this->t('Endpoint URL'),
+      '#description' => $this->t('The JSON-RPC endpoint URL.'),
+    ];
+
+    $form['add_custom_endpoint']['custom_endpoint_enabled'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Enable this endpoint'),
+      '#default_value' => TRUE,
+    ];
 
     $form['request_timeout'] = [
       '#type' => 'number',
@@ -99,6 +148,21 @@ class SettingsForm extends ConfigFormBase {
     ];
 
     return parent::buildForm($form, $form_state);
+  }
+
+  /**
+   * Checks if an endpoint with the given key already exists.
+   *
+   * @param string $key
+   *   The endpoint machine name to check.
+   *
+   * @return bool
+   *   TRUE if the endpoint exists, FALSE otherwise.
+   */
+  public function endpointExists($key) {
+    $config = $this->config('solana_integration.settings');
+    $endpoints = $config->get('endpoints') ?? [];
+    return isset($endpoints[$key]);
   }
 
   /**
@@ -119,8 +183,30 @@ class SettingsForm extends ConfigFormBase {
     if ($default_endpoint && !isset($enabled_endpoints[$default_endpoint])) {
       $form_state->setErrorByName('default_endpoint', $this->t('The default endpoint must be enabled.'));
     }
+
+    // Validate custom endpoint addition.
+    $custom_key = $form_state->getValue('custom_endpoint_key');
+    $custom_name = $form_state->getValue('custom_endpoint_name');
+    $custom_url = $form_state->getValue('custom_endpoint_url');
+
+    // If any custom endpoint field is filled, all must be filled.
+    $has_custom_data = !empty($custom_key) || !empty($custom_name) || !empty($custom_url);
+    
+    if ($has_custom_data) {
+      if (empty($custom_key)) {
+        $form_state->setErrorByName('custom_endpoint_key', $this->t('Endpoint machine name is required when adding a custom endpoint.'));
+      }
+      if (empty($custom_name)) {
+        $form_state->setErrorByName('custom_endpoint_name', $this->t('Endpoint name is required when adding a custom endpoint.'));
+      }
+      if (empty($custom_url)) {
+        $form_state->setErrorByName('custom_endpoint_url', $this->t('Endpoint URL is required when adding a custom endpoint.'));
+      }
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function submitForm(array &$form, FormStateInterface $form_state) {
     parent::submitForm($form, $form_state);
     
@@ -128,13 +214,19 @@ class SettingsForm extends ConfigFormBase {
     $endpoints = $config->get('endpoints') ?? [];
     $enabled_endpoints = array_filter($form_state->getValue('enabled_endpoints'));
     
-    // Update endpoint enabled status.
+    // Update endpoint enabled status and details.
     foreach ($endpoints as $key => $endpoint) {
-      $endpoints[$key]['enabled'] = isset($enabled_endpoints[$key]);
-      
-      // Update endpoint details if they were modified.
+      // Check if this endpoint should be deleted.
       if ($form_state->hasValue($key)) {
         $endpoint_values = $form_state->getValue($key);
+        
+        // Delete custom endpoint if delete checkbox is checked.
+        if (!empty($endpoint_values['delete']) && !empty($endpoint['custom'])) {
+          unset($endpoints[$key]);
+          continue;
+        }
+        
+        // Update endpoint details if they were modified.
         if (isset($endpoint_values['name'])) {
           $endpoints[$key]['name'] = $endpoint_values['name'];
         }
@@ -142,6 +234,28 @@ class SettingsForm extends ConfigFormBase {
           $endpoints[$key]['url'] = $endpoint_values['url'];
         }
       }
+      
+      // Update enabled status.
+      if (isset($endpoints[$key])) {
+        $endpoints[$key]['enabled'] = isset($enabled_endpoints[$key]);
+      }
+    }
+    
+    // Add new custom endpoint if provided.
+    $custom_key = $form_state->getValue('custom_endpoint_key');
+    $custom_name = $form_state->getValue('custom_endpoint_name');
+    $custom_url = $form_state->getValue('custom_endpoint_url');
+    $custom_enabled = $form_state->getValue('custom_endpoint_enabled');
+    
+    if (!empty($custom_key) && !empty($custom_name) && !empty($custom_url)) {
+      $endpoints[$custom_key] = [
+        'name' => $custom_name,
+        'url' => $custom_url,
+        'enabled' => (bool) $custom_enabled,
+        'custom' => TRUE,
+      ];
+      
+      $this->messenger()->addStatus($this->t('Custom endpoint "%name" has been added.', ['%name' => $custom_name]));
     }
     
     $config
@@ -150,4 +264,6 @@ class SettingsForm extends ConfigFormBase {
       ->set('request_timeout', (int) $form_state->getValue('request_timeout'))
       ->save();
   }
+}
+
 }

@@ -3,51 +3,30 @@ solana_integration.settings:
   label: 'Solana Integration settings'
   mapping:
     endpoints:
-      type: mapping
+      type: sequence
       label: 'Available RPC endpoints'
-      mapping:
-        mainnet:
-          type: mapping
-          label: 'Mainnet endpoint configuration'
-          mapping:
-            name:
-              type: string
-              label: 'Endpoint name'
-            url:
-              type: string
-              label: 'Endpoint URL'
-            enabled:
-              type: boolean
-              label: 'Endpoint enabled status'
-        devnet:
-          type: mapping
-          label: 'Devnet endpoint configuration'
-          mapping:
-            name:
-              type: string
-              label: 'Endpoint name'
-            url:
-              type: string
-              label: 'Endpoint URL'
-            enabled:
-              type: boolean
-              label: 'Endpoint enabled status'
-        testnet:
-          type: mapping
-          label: 'Testnet endpoint configuration'
-          mapping:
-            name:
-              type: string
-              label: 'Endpoint name'
-            url:
-              type: string
-              label: 'Endpoint URL'
-            enabled:
-              type: boolean
-              label: 'Endpoint enabled status'
+      sequence:
+        type: solana_integration.endpoint
     default_endpoint:
       type: string
       label: 'Default endpoint key'
     request_timeout:
       type: integer
       label: 'Request timeout (seconds)'
+
+solana_integration.endpoint:
+  type: mapping
+  label: 'Endpoint configuration'
+  mapping:
+    name:
+      type: string
+      label: 'Endpoint name'
+    url:
+      type: string
+      label: 'Endpoint URL'
+    enabled:
+      type: boolean
+      label: 'Endpoint enabled status'
+    custom:
+      type: boolean
+      label: 'Whether this is a custom endpoint'

@@ -1,0 +1,157 @@
+# Custom Endpoints Feature
+
+## Overview
+
+The Solana Integration module now supports adding custom RPC endpoints in addition to the predefined Solana network endpoints (mainnet, devnet, testnet).
+
+## Features
+
+### 1. **Predefined Endpoints**
+The module comes with three predefined endpoints:
+- **Mainnet Beta** - `https://api.mainnet-beta.solana.com`
+- **Devnet** - `https://api.devnet.solana.com`
+- **Testnet** - `https://api.testnet.solana.com`
+
+These endpoints cannot be deleted but can be enabled/disabled and their URLs can be modified.
+
+### 2. **Custom Endpoints**
+Administrators can add custom RPC endpoints through the settings form.
+
+#### Adding a Custom Endpoint
+
+1. Navigate to `/admin/config/services/solana-integration`
+2. Scroll to the "Add Custom Endpoint" section
+3. Fill in the following fields:
+   - **Endpoint machine name**: A unique machine-readable identifier (lowercase, numbers, underscores)
+   - **Endpoint name**: A human-readable name for the endpoint
+   - **Endpoint URL**: The JSON-RPC endpoint URL
+   - **Enable this endpoint**: Checkbox to enable the endpoint immediately
+4. Click "Save configuration"
+
+#### Managing Custom Endpoints
+
+Custom endpoints appear in the "Endpoint Details" section with a `[Custom]` label.
+
+Each custom endpoint can be:
+- **Renamed**: Edit the "Name" field
+- **URL Updated**: Edit the "URL" field
+- **Deleted**: Check the "Delete this endpoint" checkbox and save
+
+### 3. **Endpoint Selection**
+
+#### Enabled Endpoints
+Use the checkboxes in the "RPC Endpoints Configuration" section to enable/disable endpoints. At least one endpoint must be enabled at all times.
+
+#### Default Endpoint
+Select which enabled endpoint should be used by default for JSON-RPC requests. The default endpoint must be an enabled endpoint.
+
+## Configuration Structure
+
+The configuration is stored in `solana_integration.settings` with the following structure:
+
+```yaml
+endpoints:
+  mainnet:
+    name: 'Mainnet Beta'
+    url: 'https://api.mainnet-beta.solana.com'
+    enabled: true
+  devnet:
+    name: 'Devnet'
+    url: 'https://api.devnet.solana.com'
+    enabled: true
+  testnet:
+    name: 'Testnet'
+    url: 'https://api.testnet.solana.com'
+    enabled: false
+  my_custom_endpoint:
+    name: 'My Custom RPC'
+    url: 'https://my-custom-rpc.example.com'
+    enabled: true
+    custom: true
+default_endpoint: 'mainnet'
+request_timeout: 5
+```
+
+## Usage in Code
+
+The `SolanaClient` service automatically uses the configured default endpoint:
+
+```php
+// Inject the service
+$client = \Drupal::service('solana_integration.client');
+
+// Make RPC calls - automatically uses the default endpoint
+$result = $client->rpc('getHealth');
+```
+
+## Validation Rules
+
+1. **At least one endpoint must be enabled** - The system requires at least one active endpoint
+2. **Default endpoint must be enabled** - You cannot set a disabled endpoint as default
+3. **Custom endpoint fields are required** - When adding a custom endpoint, all fields (key, name, URL) must be filled
+4. **Unique machine names** - Custom endpoint machine names must be unique
+
+## Common Use Cases
+
+### Private RPC Nodes
+Add your own private Solana RPC nodes for better performance and reliability:
+
+```
+Machine name: my_private_node
+Name: My Private Node
+URL: https://my-node.example.com:8899
+```
+
+### Third-Party RPC Providers
+Add premium RPC endpoints from providers like:
+- QuickNode
+- Alchemy
+- GenesysGo
+- Triton
+
+### Local Development
+Add local Solana test validator endpoints:
+
+```
+Machine name: local_validator
+Name: Local Test Validator
+URL: http://localhost:8899
+```
+
+## Best Practices
+
+1. **Use descriptive names** - Make it clear what each endpoint is for
+2. **Test endpoints before enabling** - Verify the URL is accessible
+3. **Monitor performance** - Different endpoints may have varying latency
+4. **Use private endpoints for production** - Public endpoints may have rate limits
+5. **Keep testnet disabled in production** - Only enable networks you actually use
+
+## Troubleshooting
+
+### Endpoint Not Working
+- Verify the URL is correct and accessible
+- Check if the endpoint requires authentication (API keys)
+- Ensure the endpoint supports JSON-RPC 2.0
+
+### Cannot Delete Endpoint
+- Only custom endpoints (marked with `[Custom]`) can be deleted
+- Predefined endpoints (mainnet, devnet, testnet) cannot be deleted
+
+### Default Endpoint Error
+- Ensure the endpoint you're trying to set as default is enabled
+- At least one endpoint must remain enabled
+
+## Technical Details
+
+### Form Elements
+- Endpoint machine names use Drupal's `machine_name` form element
+- URL validation is handled by Drupal's `url` form type
+- Custom endpoints are tracked with a `custom: true` flag in configuration
+
+### Service Integration
+The `SolanaClient` service includes fallback logic:
+1. Try to use the configured default endpoint
+2. Fall back to the first enabled endpoint if default is unavailable
+3. Ultimate fallback to mainnet URL if all else fails
+
+This ensures the service remains functional even if configuration becomes inconsistent.
