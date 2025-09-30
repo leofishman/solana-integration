@@ -62,16 +62,14 @@ class SettingsForm extends ConfigFormBase {
     // Endpoint management section.
     $form['endpoint_management'] = [
       '#type' => 'fieldset',
-      '#title' => $this->t('Endpoint Details'),
-      '#description' => $this->t('View and modify endpoint configurations.'),
+      '#title' => $this->t('Manage Endpoints'),
+      '#description' => $this->t('Edit or delete existing endpoints. Official Solana endpoints are installed by default but can be modified or removed.'),
     ];
 
     foreach ($endpoints as $key => $endpoint) {
-      $is_custom = !empty($endpoint['custom']);
-      
       $form['endpoint_management'][$key] = [
         '#type' => 'fieldset',
-        '#title' => $endpoint['name'] . ($is_custom ? ' ' . $this->t('[Custom]') : ''),
+        '#title' => $endpoint['name'],
         '#collapsible' => TRUE,
         '#collapsed' => TRUE,
       ];
@@ -91,14 +89,12 @@ class SettingsForm extends ConfigFormBase {
         '#description' => $this->t('The JSON-RPC endpoint URL.'),
       ];
 
-      // Add delete button for custom endpoints.
-      if ($is_custom) {
-        $form['endpoint_management'][$key]['delete'] = [
-          '#type' => 'checkbox',
-          '#title' => $this->t('Delete this endpoint'),
-          '#default_value' => FALSE,
-        ];
-      }
+      // Add delete button for all endpoints.
+      $form['endpoint_management'][$key]['delete'] = [
+        '#type' => 'checkbox',
+        '#title' => $this->t('Delete this endpoint'),
+        '#default_value' => FALSE,
+      ];
     }
 
     // Add custom endpoint section.
@@ -110,6 +106,12 @@ class SettingsForm extends ConfigFormBase {
       '#collapsed' => FALSE,
     ];
 
+    $form['add_custom_endpoint']['custom_endpoint_name'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Endpoint name'),
+      '#description' => $this->t('A human-readable name for this endpoint.'),
+    ];
+
     $form['add_custom_endpoint']['custom_endpoint_key'] = [
       '#type' => 'machine_name',
       '#title' => $this->t('Endpoint machine name'),
@@ -119,12 +121,6 @@ class SettingsForm extends ConfigFormBase {
         'source' => ['add_custom_endpoint', 'custom_endpoint_name'],
       ],
       '#required' => FALSE,
-    ];
-
-    $form['add_custom_endpoint']['custom_endpoint_name'] = [
-      '#type' => 'textfield',
-      '#title' => $this->t('Endpoint name'),
-      '#description' => $this->t('A human-readable name for this endpoint.'),
     ];
 
     $form['add_custom_endpoint']['custom_endpoint_url'] = [
@@ -202,6 +198,7 @@ class SettingsForm extends ConfigFormBase {
       if (empty($custom_url)) {
         $form_state->setErrorByName('custom_endpoint_url', $this->t('Endpoint URL is required when adding a custom endpoint.'));
       }
+    }
   }
 
   /**
@@ -214,15 +211,18 @@ class SettingsForm extends ConfigFormBase {
     $endpoints = $config->get('endpoints') ?? [];
     $enabled_endpoints = array_filter($form_state->getValue('enabled_endpoints'));
     
+    // Track endpoints marked for deletion.
+    $endpoints_to_delete = [];
+    
     // Update endpoint enabled status and details.
     foreach ($endpoints as $key => $endpoint) {
       // Check if this endpoint should be deleted.
       if ($form_state->hasValue($key)) {
         $endpoint_values = $form_state->getValue($key);
         
-        // Delete custom endpoint if delete checkbox is checked.
-        if (!empty($endpoint_values['delete']) && !empty($endpoint['custom'])) {
-          unset($endpoints[$key]);
+        // Delete endpoint if delete checkbox is checked.
+        if (!empty($endpoint_values['delete'])) {
+          $endpoints_to_delete[] = $key;
           continue;
         }
         
@@ -241,6 +241,11 @@ class SettingsForm extends ConfigFormBase {
       }
     }
     
+    // Remove deleted endpoints.
+    foreach ($endpoints_to_delete as $key) {
+      unset($endpoints[$key]);
+    }
+    
     // Add new custom endpoint if provided.
     $custom_key = $form_state->getValue('custom_endpoint_key');
     $custom_name = $form_state->getValue('custom_endpoint_name');
@@ -252,10 +257,9 @@ class SettingsForm extends ConfigFormBase {
         'name' => $custom_name,
         'url' => $custom_url,
         'enabled' => (bool) $custom_enabled,
-        'custom' => TRUE,
       ];
       
-      $this->messenger()->addStatus($this->t('Custom endpoint "%name" has been added.', ['%name' => $custom_name]));
+      $this->messenger()->addStatus($this->t('Endpoint "%name" has been added.', ['%name' => $custom_name]));
     }
     
     $config
@@ -266,4 +270,3 @@ class SettingsForm extends ConfigFormBase {
   }
 }
 
-}

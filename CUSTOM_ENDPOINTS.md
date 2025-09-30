@@ -6,16 +6,16 @@ The Solana Integration module now supports adding custom RPC endpoints in additi
 
 ## Features
 
-### 1. **Predefined Endpoints**
-The module comes with three predefined endpoints:
-- **Mainnet Beta** - `https://api.mainnet-beta.solana.com`
-- **Devnet** - `https://api.devnet.solana.com`
-- **Testnet** - `https://api.testnet.solana.com`
+### 1. **Default Official Endpoints**
+The module is installed with three official Solana endpoints:
+- **Mainnet Beta** - `https://api.mainnet-beta.solana.com` (enabled by default)
+- **Devnet** - `https://api.devnet.solana.com` (enabled by default)
+- **Testnet** - `https://api.testnet.solana.com` (disabled by default)
 
-These endpoints cannot be deleted but can be enabled/disabled and their URLs can be modified.
+These endpoints are provided for convenience during installation but are treated the same as any custom endpoint you add - they can be fully edited or deleted.
 
-### 2. **Custom Endpoints**
-Administrators can add custom RPC endpoints through the settings form.
+### 2. **Adding Custom Endpoints**
+Administrators can add unlimited custom RPC endpoints through the settings form.
 
 #### Adding a Custom Endpoint
 
@@ -28,14 +28,16 @@ Administrators can add custom RPC endpoints through the settings form.
    - **Enable this endpoint**: Checkbox to enable the endpoint immediately
 4. Click "Save configuration"
 
-#### Managing Custom Endpoints
+#### Managing Endpoints
 
-Custom endpoints appear in the "Endpoint Details" section with a `[Custom]` label.
+All endpoints (including the default Solana ones) appear in the "Manage Endpoints" section.
 
-Each custom endpoint can be:
+Each endpoint can be:
 - **Renamed**: Edit the "Name" field
 - **URL Updated**: Edit the "URL" field
 - **Deleted**: Check the "Delete this endpoint" checkbox and save
+
+**Note**: You can delete any endpoint, including the default Solana endpoints. Just make sure to keep at least one endpoint enabled.
 
 ### 3. **Endpoint Selection**
 
@@ -67,7 +69,6 @@ endpoints:
     name: 'My Custom RPC'
     url: 'https://my-custom-rpc.example.com'
     enabled: true
-    custom: true
 default_endpoint: 'mainnet'
 request_timeout: 5
 ```
@@ -134,8 +135,8 @@ URL: http://localhost:8899
 - Ensure the endpoint supports JSON-RPC 2.0
 
 ### Cannot Delete Endpoint
-- Only custom endpoints (marked with `[Custom]`) can be deleted
-- Predefined endpoints (mainnet, devnet, testnet) cannot be deleted
+- Ensure at least one endpoint remains after deletion
+- The system requires at least one enabled endpoint to function
 
 ### Default Endpoint Error
 - Ensure the endpoint you're trying to set as default is enabled
@@ -146,7 +147,8 @@ URL: http://localhost:8899
 ### Form Elements
 - Endpoint machine names use Drupal's `machine_name` form element
 - URL validation is handled by Drupal's `url` form type
-- Custom endpoints are tracked with a `custom: true` flag in configuration
+- All endpoints are stored identically in configuration
+- Official Solana endpoints are provided as defaults during installation but can be modified or removed
 
 ### Service Integration
 The `SolanaClient` service includes fallback logic:

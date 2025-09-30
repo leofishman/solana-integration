@@ -39,7 +39,7 @@ class SolanaClient {
     private readonly ConfigFactoryInterface $configFactory,
   ) {}
 
- protected function getEndpoint(): string {
+ public function getEndpoint(): string {
     $config = $this->configFactory->get('solana_integration.settings');
     $default_endpoint_key = $config->get('default_endpoint') ?? 'mainnet';
     $endpoints = $config->get('endpoints') ?? [];
@@ -73,7 +73,9 @@ class SolanaClient {
    * @return array|null The balance in lamports, or null on error.
    */
   public function getBalance(string $pubkey): ?array {
-    $rpc = new SolanaRPC($this->endpoint);
+    $endpoint = $this->getEndpoint();
+    $timeout = $this->getTimeout();
+    $rpc = new SolanaRPC($endpoint, $timeout);
     $account = new Account($rpc);
     $block = new Block($rpc);
     $transaction = new Transaction($rpc);

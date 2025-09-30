@@ -88,10 +88,11 @@ class BalanceCheckForm extends FormBase {
       $lamports = $balance_array['value'] ?? null;
       if (is_int($lamports)) {
         $sol = $lamports / 1_000_000_000; // 1 SOL = 10^9 lamports
-        $this->messenger()->addStatus($this->t('The balance for account @address is @sol SOL (@lamports lamports).', [
+        $this->messenger()->addStatus($this->t('The balance for account @address is @sol SOL (@lamports lamports). <br />RPC Endpoint: @endpoint', [
           '@address' => $address,
           '@sol' => number_format($sol, 9),
           '@lamports' => number_format($lamports),
+          '@endpoint' => $this->solanaClient->getEndpoint()
         ]));
       }
       else {

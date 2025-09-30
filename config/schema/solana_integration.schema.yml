@@ -27,6 +27,3 @@ solana_integration.endpoint:
     enabled:
       type: boolean
       label: 'Endpoint enabled status'
-    custom:
-      type: boolean
-      label: 'Whether this is a custom endpoint'
