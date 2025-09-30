@@ -69,13 +69,14 @@ class SolanaClient {
    *
    * @param string $pubkey
    *   The public key of the account.
+   * @param string|null $endpoint
+   *   Optional. The RPC endpoint URL to use. If not provided, uses the default endpoint.
    *
    * @return array|null The balance in lamports, or null on error.
    */
-  public function getBalance(string $pubkey): ?array {
-    $endpoint = $this->getEndpoint();
-    $timeout = $this->getTimeout();
-    $rpc = new SolanaRPC($endpoint, $timeout);
+  public function getBalance(string $pubkey, ?string $endpoint = NULL): ?array {
+    $endpoint = $endpoint ?? $this->getEndpoint();
+    $rpc = new SolanaRPC($endpoint);
     $account = new Account($rpc);
     $block = new Block($rpc);
     $transaction = new Transaction($rpc);

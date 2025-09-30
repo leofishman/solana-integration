@@ -5,6 +5,7 @@ namespace Drupal\solana_integration\Form;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Messenger\MessengerInterface;
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\solana_integration\Service\SolanaClient;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -21,10 +22,18 @@ class BalanceCheckForm extends FormBase {
   protected SolanaClient $solanaClient;
 
   /**
+   * The config factory service.
+   *
+   * @var \Drupal\Core\Config\ConfigFactoryInterface
+   */
+  protected $configFactory;
+
+  /**
    * {@inheritdoc}
    */
-  public function __construct(SolanaClient $solana_client, MessengerInterface $messenger) {
+  public function __construct(SolanaClient $solana_client, ConfigFactoryInterface $config_factory, MessengerInterface $messenger) {
     $this->solanaClient = $solana_client;
+    $this->configFactory = $config_factory;
     $this->setMessenger($messenger);
   }
 
@@ -34,6 +43,7 @@ class BalanceCheckForm extends FormBase {
   public static function create(ContainerInterface $container): self {
     return new static(
       $container->get('solana_integration.client'),
+      $container->get('config.factory'),
       $container->get('messenger')
     );
   }
@@ -57,6 +67,37 @@ class BalanceCheckForm extends FormBase {
       '#maxlength' => 44,
       '#size' => 45,
     ];
+
+    // Get configuration.
+    $config = $this->configFactory->get('solana_integration.settings');
+    $endpoints = $config->get('endpoints') ?? [];
+    $default_endpoint_key = $config->get('default_endpoint') ?? 'mainnet';
+
+    // Build endpoint options (only show enabled endpoints).
+    $endpoint_options = [];
+    foreach ($endpoints as $key => $endpoint) {
+      if (!empty($endpoint['enabled'])) {
+        $endpoint_options[$key] = $endpoint['name'] . ' (' . $endpoint['url'] . ')';
+      }
+    }
+
+    // Add endpoint selector fieldset.
+    if (!empty($endpoint_options)) {
+      $form['endpoint_settings'] = [
+        '#type' => 'details',
+        '#title' => $this->t('RPC Endpoint Settings'),
+        '#open' => FALSE,
+        '#description' => $this->t('Select which RPC endpoint to use for this balance check.'),
+      ];
+
+      $form['endpoint_settings']['endpoint'] = [
+        '#type' => 'select',
+        '#title' => $this->t('RPC Endpoint'),
+        '#options' => $endpoint_options,
+        '#default_value' => $default_endpoint_key,
+        '#description' => $this->t('The RPC endpoint to query. Defaults to the configured default endpoint.'),
+      ];
+    }
 
     $form['actions']['submit'] = [
       '#type' => 'submit',
@@ -82,17 +123,33 @@ class BalanceCheckForm extends FormBase {
    */
   public function submitForm(array &$form, FormStateInterface $form_state): void {
     $address = $form_state->getValue('account_address');
+    $selected_endpoint_key = $form_state->getValue('endpoint');
+
+    // Get the selected endpoint details.
+    $config = $this->configFactory->get('solana_integration.settings');
+    $endpoints = $config->get('endpoints') ?? [];
+    $selected_endpoint = $endpoints[$selected_endpoint_key] ?? null;
+
+    if (!$selected_endpoint) {
+      $this->messenger()->addError($this->t('Selected endpoint is not available.'));
+      return;
+    }
+
+    $endpoint_url = $selected_endpoint['url'];
+    $endpoint_name = $selected_endpoint['name'];
 
     try {
-      $balance_array = $this->solanaClient->getBalance($address);
+      // Use the selected endpoint for the balance check.
+      $balance_array = $this->solanaClient->getBalance($address, $endpoint_url);
       $lamports = $balance_array['value'] ?? null;
+      
       if (is_int($lamports)) {
         $sol = $lamports / 1_000_000_000; // 1 SOL = 10^9 lamports
         $this->messenger()->addStatus($this->t('The balance for account @address is @sol SOL (@lamports lamports). <br />RPC Endpoint: @endpoint', [
           '@address' => $address,
           '@sol' => number_format($sol, 9),
           '@lamports' => number_format($lamports),
-          '@endpoint' => $this->solanaClient->getEndpoint()
+          '@endpoint' => $endpoint_name . ' (' . $endpoint_url . ')',
         ]));
       }
       else {
