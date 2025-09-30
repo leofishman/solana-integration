@@ -59,6 +59,8 @@ class BalanceCheckForm extends FormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state): array {
+    $account_address = $form_state->getValue('account_address') ?? '';
+
     $form['account_address'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Solana Account Address'),
@@ -66,6 +68,7 @@ class BalanceCheckForm extends FormBase {
       '#required' => TRUE,
       '#maxlength' => 44,
       '#size' => 45,
+      '#default_value' => $account_address,
     ];
 
     // Get configuration.
@@ -159,6 +162,7 @@ class BalanceCheckForm extends FormBase {
     catch (\Exception $e) {
       $this->messenger()->addError($this->t('An unexpected error occurred: @message', ['@message' => $e->getMessage()]));
     }
+    $form_state->setRebuild(TRUE);
   }
 
 }
