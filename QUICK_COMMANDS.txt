@@ -1,0 +1,93 @@
+╔════════════════════════════════════════════════════════════════╗
+║  SOLANA INTEGRATION MODULE - QUICK COMMANDS                    ║
+╚════════════════════════════════════════════════════════════════╝
+
+┌────────────────────────────────────────────────────────────────┐
+│ REINSTALL MODULE (Full Script)                                 │
+└────────────────────────────────────────────────────────────────┘
+
+  ./reinstall-module.sh
+
+
+┌────────────────────────────────────────────────────────────────┐
+│ REINSTALL MODULE (One-Liner)                                   │
+└────────────────────────────────────────────────────────────────┘
+
+  ddev drush pm:uninstall solana_integration -y && \
+  ddev drush cr && \
+  ddev drush pm:enable solana_integration -y && \
+  ddev drush cr
+
+
+┌────────────────────────────────────────────────────────────────┐
+│ MOST COMMON COMMANDS                                           │
+└────────────────────────────────────────────────────────────────┘
+
+  Install Module:
+  ddev drush en solana_integration -y
+
+  Uninstall Module:
+  ddev drush pmu solana_integration -y
+
+  Clear Cache:
+  ddev drush cr
+
+  Module Status:
+  ddev drush pm:list --filter=solana
+
+  View Config:
+  ddev drush config:get solana_integration.settings
+
+  Open Admin Page:
+  ddev launch /admin/config/services/solana-integration
+
+
+┌────────────────────────────────────────────────────────────────┐
+│ ENDPOINT MANAGEMENT                                            │
+└────────────────────────────────────────────────────────────────┘
+
+  View Endpoints:
+  ddev drush config:get solana_integration.settings endpoints
+
+  View Default Endpoint:
+  ddev drush config:get solana_integration.settings default_endpoint
+
+  Change Default Endpoint:
+  ddev drush config:set solana_integration.settings default_endpoint devnet
+
+  Edit Config Manually:
+  ddev drush config:edit solana_integration.settings
+
+
+┌────────────────────────────────────────────────────────────────┐
+│ DEBUGGING                                                      │
+└────────────────────────────────────────────────────────────────┘
+
+  View PHP Errors:
+  ddev drush watchdog:show --type=php
+
+  Tail Logs:
+  ddev drush watchdog:tail
+
+  View DDEV Logs:
+  ddev logs
+
+
+┌────────────────────────────────────────────────────────────────┐
+│ FILE LOCATIONS                                                 │
+└────────────────────────────────────────────────────────────────┘
+
+  Admin Form:     /admin/config/services/solana-integration
+  
+  Settings Form:  src/Form/SettingsForm.php
+  
+  Service:        src/Service/SolanaClient.php
+  
+  Config Schema:  config/schema/solana_integration.schema.yml
+  
+  Default Config: config/install/solana_integration.settings.yml
+
+
+╔════════════════════════════════════════════════════════════════╗
+║  For more details, see SCRIPTS_README.md                       ║
+╚════════════════════════════════════════════════════════════════╝
