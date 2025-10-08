@@ -20,6 +20,21 @@ class SettingsForm extends ConfigFormBase {
 
   public function buildForm(array $form, FormStateInterface $form_state) {
     $config = $this->config('solana_integration.settings');
+
+     $form['solana_pay_section'] = [
+      '#type' => 'fieldset',
+      '#title' => $this->t('Solana Pay Configuration'),
+    ];
+
+    $form['solana_pay_section']['merchant_wallet_address'] = [
+        '#type' => 'textfield',
+        '#title' => $this->t('Merchant Wallet Address'),
+        '#description' => $this->t('The public key of the wallet that will receive payments.'),
+        '#default_value' => $config->get('merchant_wallet_address'),
+        '#maxlength' => 44,
+        '#size' => 45,
+    ];
+
     $endpoints = $config->get('endpoints') ?? [];
     $default_endpoint = $config->get('default_endpoint') ?? 'mainnet';
 
@@ -257,6 +272,7 @@ class SettingsForm extends ConfigFormBase {
     $config
       ->set('endpoints', $endpoints)
       ->set('default_endpoint', $form_state->getValue('default_endpoint'))
+      ->set('merchant_wallet_address', $form_state->getValue('merchant_wallet_address'))      
       ->save();
   }
 }
