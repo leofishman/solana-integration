@@ -10,6 +10,9 @@ solana_integration.settings:
     default_endpoint:
       type: string
       label: 'Default endpoint key'
+    merchant_wallet_address:
+      type: string
+      label: 'Merchant Wallet Address'
 
 solana_integration.endpoint:
   type: mapping
@@ -24,3 +27,4 @@ solana_integration.endpoint:
     enabled:
       type: boolean
       label: 'Endpoint enabled status'
+

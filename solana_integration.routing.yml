@@ -13,3 +13,11 @@ solana_integration.balance_check:
     _title: 'Check Account Balance'
   requirements:
     _permission: 'access content'
+
+solana_integration.payment_verify:
+  path: '/solana-pay/verify/{reference}/{amount}'
+  defaults:
+    _controller: '\Drupal\solana_integration\Controller\SolanaPayController::verify'
+    _title: 'Verify Solana Payment'
+  requirements:
+    _permission: 'access content'
