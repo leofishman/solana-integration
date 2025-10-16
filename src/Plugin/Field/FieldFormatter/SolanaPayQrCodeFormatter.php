@@ -19,7 +19,8 @@ use Drupal\Core\Url;
  * field_types = {
  * "decimal",
  * "float",
- * "integer"
+ * "integer",
+ * "solana_wallet" 
  * }
  * )
  */
