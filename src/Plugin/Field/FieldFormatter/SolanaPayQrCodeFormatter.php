@@ -93,6 +93,7 @@ class SolanaPayQrCodeFormatter extends FormatterBase implements ContainerFactory
       $elements[$delta] = [
         '#theme' => 'solana_pay_qr_code',
         '#unique_id' => $unique_id,
+        '#amount' => $amount,
         '#attached' => [
           'library' => ['solana_integration/solana_pay_qr'],
           'drupalSettings' => [
