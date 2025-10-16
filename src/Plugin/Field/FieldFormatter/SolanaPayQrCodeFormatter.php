@@ -20,7 +20,6 @@ use Drupal\Core\Url;
  * "decimal",
  * "float",
  * "integer",
- * "solana_wallet" 
  * }
  * )
  */
@@ -66,6 +65,7 @@ class SolanaPayQrCodeFormatter extends FormatterBase implements ContainerFactory
 
     foreach ($items as $delta => $item) {
       $amount = (float) $item->value;
+
       if ($amount <= 0) {
         continue;
       }

@@ -20,3 +20,5 @@ test_dependencies:
 
 # PHP requirements
 php: 8.2
+php_extensions:
+  - sodium
