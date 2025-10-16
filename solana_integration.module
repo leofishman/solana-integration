@@ -26,7 +26,7 @@ function solana_integration_help($route_name, \Drupal\Core\Routing\RouteMatchInt
 function solana_integration_theme() {
   return [
     'solana_pay_qr_code' => [
-      'variables' => ['unique_id' => NULL],
+      'variables' => ['unique_id' => NULL,'amount' => NULL],
     ],
   ];
 }
