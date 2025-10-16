@@ -1,0 +1,9 @@
+# Schema for the Solana Pay payment gateway.
+
+commerce.payment_gateway.plugin.solana_pay:
+  type: commerce_payment_gateway
+  label: 'Solana Pay'
+  mapping:
+    merchant_wallet_address:
+      type: string
+      label: 'Merchant Wallet Address'
