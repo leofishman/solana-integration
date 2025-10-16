@@ -58,7 +58,7 @@ class SolanaPay extends OffsitePaymentGatewayBase implements SupportsRefundsInte
     *
     * @var \Psr\Log\LoggerInterface
     */
-   protected $logger;
+  protected $logger;
 
   /**
    * Constructs a new SolanaPay object.
@@ -109,9 +109,11 @@ class SolanaPay extends OffsitePaymentGatewayBase implements SupportsRefundsInte
     * {@inheritdoc}
     */
    public function defaultConfiguration() {
+   $config = $this->configFactory->get('solana_integration.settings');
+   $address = $config->get('merchant_wallet_address');    
      return [
-       'merchant_wallet_address' => '',
-     ] + parent::defaultConfiguration();
+       'merchant_wallet_address' => $address,
+    ] + parent::defaultConfiguration();
    }
 
    /**
@@ -119,15 +121,6 @@ class SolanaPay extends OffsitePaymentGatewayBase implements SupportsRefundsInte
     */
    public function buildConfigurationForm(array $form, FormStateInterface $form_state) {
      $form = parent::buildConfigurationForm($form, $form_state);
-
-     $form['merchant_wallet_address'] = [
-       '#type' => 'textfield',
-       '#title' => $this->t('Merchant Wallet Address'),
-       '#description' => $this->t('The Solana wallet address that will receive payments.'),
-       '#default_value' => $this->configuration['merchant_wallet_address'],
-       '#required' => TRUE,
-     ];
-
      return $form;
    }
 
@@ -136,14 +129,6 @@ class SolanaPay extends OffsitePaymentGatewayBase implements SupportsRefundsInte
     */
     public function validateConfigurationForm(array &$form, FormStateInterface $form_state) {
     parent::validateConfigurationForm($form, $form_state);
-
-    $configuration = $form_state->getValue('configuration');
-    $value = isset($configuration['solana_pay']['merchant_wallet_address']) ? $configuration['solana_pay']['merchant_wallet_address'] : '';
-    $address = is_string($value) ? trim($value) : '';
-
-    if (empty($address)) {
-      $form_state->setErrorByName('merchant_wallet_address', $this->t('Please enter a merchant wallet address.'));
-    }
   }
 
    /**
@@ -151,50 +136,70 @@ class SolanaPay extends OffsitePaymentGatewayBase implements SupportsRefundsInte
     */
    public function submitConfigurationForm(array &$form, FormStateInterface $form_state) {
      parent::submitConfigurationForm($form, $form_state);
-
-   $values = $form_state->getValues();
-    if (isset($values['configuration']['solana_pay']['merchant_wallet_address'])) {
-      $this->configuration['merchant_wallet_address'] = $values['configuration']['solana_pay']['merchant_wallet_address'];
-    }
    }
-
-    /**
-    * {@inheritdoc}
-    */
-   public function buildRedirectForm(PaymentInterface $payment, Request $request, FormStateInterface $form_state) {
-
-    $order = $payment->getOrder();
-    $order_id = $order->id();
-    $amount = $payment->getAmount()->getNumber();
-    $label = 'Payment for order #' . $order_id;
-    $message = 'Order #' . $order_id;
-    $reference = '';
-
-    $payment_request_url = $this->solanaClient->generatePaymentRequest($amount, $label, $message, $reference);
-
-    if (!$payment_request_url) {
-      $this->messenger->addError($this->t('Solana Pay is not configured correctly.'));
-      return [];
-    }
-
-    $form = [
-      '#type' => 'container',
-      '#attributes' => [
-        'class' => ['commerce-payment-redirect-form'],
-      ],
-    ];
-
-    $form['#attached']['library'][] = 'commerce_payment/redirect';
-
-    $form['#action'] = $payment_request_url;
-
-    return $form;
-  }
 
    /**
     * {@inheritdoc}
     */
-   public function capturePayment(PaymentInterface $payment, OrderInterface $order, ?float $amount = NULL) {
+   public function createPayment(PaymentInterface $payment, array $payment_details) {
+     // Set the payment state to 'new' initially
+     $payment->setState('new');
+     $payment->save();
+   }
+
+   /**
+    * {@inheritdoc}
+    */
+public function buildRedirectForm(PaymentInterface $payment, Request $request, FormStateInterface $form_state) {
+
+        $order = $payment->getOrder();
+        $payment_gateway = $order->get('payment_gateway')->entity;
+        if (empty($payment_gateway)) {
+            \Drupal::messenger()->addError($this->t('The payment gateway is not configured for this order.'));
+            return [];
+        }
+
+        $order_id = $order->id();
+        $amount = $payment->getAmount()->getNumber();
+        $label = 'Payment for order #' . $order_id;
+        $message = 'Order #' . $order_id;
+        $reference = '';
+        $recipient = $this->getMerchantWalletAddress();
+        $spl_token = 'So11111111111111111111111111111111111111112';
+
+        $payment_request_url = $this->solanaClient->buildPaymentRequestUrl($recipient, $amount, $spl_token, $reference, $label, $message);
+
+        if (!$payment_request_url) {
+            $this->messenger->addError($this->t('Solana Pay is not configured correctly.'));
+            return [];
+        }
+
+        // Create a simple redirect form
+        $form = [
+            '#type' => 'container',
+            '#attributes' => [
+                'class' => ['commerce-payment-redirect-form'],
+            ],
+        ];
+
+        $form['payment_url'] = [
+            '#type' => 'hidden',
+            '#value' => $payment_request_url,
+        ];
+
+        $form['redirect_message'] = [
+            '#markup' => $this->t('You will be redirected to complete your payment via Solana Pay.'),
+        ];
+
+        $form['#attached']['library'][] = 'commerce_payment/redirect';
+
+        return $form;
+    }
+
+   /**
+    * {@inheritdoc}
+    */
+   public function capturePayment(PaymentInterface $payment, ?Price $amount = NULL) {
      // Solana transactions are captured immediately.
      $payment->setState('completed');
      $payment->save();
@@ -216,7 +221,8 @@ class SolanaPay extends OffsitePaymentGatewayBase implements SupportsRefundsInte
    *   The merchant wallet address.
    */
   public function getMerchantWalletAddress() {
-    return $this->configuration['merchant_wallet_address'];
-   }
+    $config = $this->configFactory->get('solana_integration.settings');
+    return $config->get('merchant_wallet_address') ?? '';
+  }
 
 }

@@ -7,11 +7,13 @@ use JosephOpanel\SolanaSDK\SolanaRPC;
 use JosephOpanel\SolanaSDK\Endpoints\JsonRPC\Account;
 use JosephOpanel\SolanaSDK\Endpoints\JsonRPC\Transaction;
 use StephenHill\Base58;
+use Drupal\Core\StringTranslation\StringTranslationTrait;
 
 /**
  * A wrapper for the Solana PHP SDK, configured via Drupal services.
  */
 class SolanaClient {
+  use StringTranslationTrait;
 
   /**
    * The Solana RPC service.
@@ -85,7 +87,40 @@ class SolanaClient {
 
   // --- START OF NEW METHODS FOR SOLANA PAY ---
 
+  
   /**
+   * Builds the Solana Pay payment request URL.
+   *
+   * @param string $recipient
+   *   The recipient address.
+   * @param float $amount
+   *   The amount to pay.
+   * @param string $spl_token
+   *   The SPL token address.
+   * @param string $reference
+   *   The reference ID.
+   * @param string $label
+   *   The label.
+   * @param string $message
+   *   The message.
+   *
+   * @return string
+   *   The Solana Pay URL.
+   */
+  public function buildPaymentRequestUrl(string $recipient, float $amount, string $spl_token, string $reference, string $label, string $message): string {
+    $url_params = http_build_query([
+      'recipient' => $recipient,
+      'amount' => $amount,
+      'spl-token' => $spl_token,
+      'reference' => $reference,
+      'label' => $label,
+      'message' => $message,
+    ]);
+
+    return "solana:" . $recipient . "?" . $url_params;
+  }
+
+    /**
    * Generates a Solana Pay payment request URL.
    *
    * @param float $amount
@@ -124,16 +159,9 @@ class SolanaClient {
     $reference_key = $base58->encode($publicKey);
 
 
-    $url_params = http_build_query([
-      'recipient' => $recipient,
-      'amount' => $amount,
-      'spl-token' => 'So11111111111111111111111111111111111111112', // Native SOL address
-      'reference' => $reference_key,
-      'label' => $label,
-      'message' => $message,
-    ]);
+    // move code to BuildPaymentRequestUrl
 
-    return "solana:" . $recipient . "?" . $url_params;
+    return $this->buildPaymentRequestUrl($recipient, $amount, 'So11111111111111111111111111111111111111112', $reference_key, $label, $message);
   }
 
   /**
