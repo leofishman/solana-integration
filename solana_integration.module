@@ -19,3 +19,14 @@ function solana_integration_help($route_name, \Drupal\Core\Routing\RouteMatchInt
       return Markup::create(implode("\n", $output));
   }
 }
+
+/**
+ * Implements hook_theme().
+ */
+function solana_integration_theme() {
+  return [
+    'solana_pay_qr_code' => [
+      'variables' => ['unique_id' => NULL],
+    ],
+  ];
+}

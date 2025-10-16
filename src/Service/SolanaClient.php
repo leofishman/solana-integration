@@ -7,6 +7,7 @@ use JosephOpanel\SolanaSDK\SolanaRPC;
 use JosephOpanel\SolanaSDK\Endpoints\JsonRPC\Account;
 use JosephOpanel\SolanaSDK\Endpoints\JsonRPC\Block;
 use JosephOpanel\SolanaSDK\Endpoints\JsonRPC\Transaction;
+use JosephOpanel\SolanaSDK\Keypair;
 
 /**
  * A wrapper for the Solana PHP SDK, configured via Drupal services.
@@ -83,5 +84,115 @@ class SolanaClient {
     // Get the balance of an account
     $balance = $account->getBalance($pubkey, $block->getLatestBlockhash()['value']['blockhash'] ?? 'finalized');
     return $balance;
+  }
+
+  // --- START OF NEW METHODS FOR SOLANA PAY ---
+
+  /**
+   * Generates a Solana Pay payment request URL.
+   *
+   * @param float $amount
+   * The amount of SOL to request.
+   * @param string $label
+   * The label for the payment (e.g., "My Online Store").
+   * @param string $message
+   * A message for the payment (e.g., "Order #12345").
+   * @param string &$reference_key
+   * A variable passed by reference to store the generated reference public key.
+   *
+   * @return string|null
+   * The generated solana: URL, or null if the merchant address is not configured.
+   */
+  public function generatePaymentRequest(float $amount, string $label, string $message, string &$reference_key): ?string
+  {
+      $config = $this->configFactory->get('solana_integration.settings');
+      $recipient = $config->get('merchant_wallet_address');
+
+      if (empty($recipient)) {
+          return NULL; // We cannot generate a request without a recipient.
+      }
+
+      // CRITICAL: Each payment request MUST have a unique reference
+      // to be able to track it on the blockchain without ambiguity.
+      
+      $reference_key = 'So11111111111111111111111111111111111111112'; 
+
+
+      $url_params = http_build_query([
+          'recipient' => $recipient,
+          'amount' => $amount,
+          'spl-token' => 'So11111111111111111111111111111111111111112', // Native SOL address
+          'reference' => $reference_key,
+          'label' => $label,
+          'message' => $message,
+      ]);
+
+      return "solana:" . $recipient . "?" . $url_params;
+  }
+
+  /**
+   * Verifies if a Solana Pay payment has been confirmed on the blockchain.
+   *
+   * @param string $reference_key
+   * The public key used as a reference for the transaction.
+   * @param float $expected_amount
+   * The expected amount in SOL.
+   *
+   * @return bool
+   * TRUE if the payment is fully confirmed and valid, FALSE otherwise.
+   */
+  public function verifyPayment(string $reference_key, float $expected_amount): bool
+  {
+      $config = $this->configFactory->get('solana_integration.settings');
+      $merchant_wallet = $config->get('merchant_wallet_address');
+      $endpoint = $this->getEndpoint();
+
+      try {
+          $rpc = new SolanaRPC($endpoint);
+          $transaction_client = new Transaction($rpc);
+
+          // 1. Find transaction signatures for the reference key.
+          // The reference key is included in the transaction's keys,
+          // allowing us to find it with getSignaturesForAddress.
+          $signatures = $transaction_client->getSignaturesForAddress($reference_key, ['limit' => 1]);
+
+          if (empty($signatures['result'])) {
+              return FALSE; // No transaction found for this reference.
+          }
+
+          $signature = $signatures['result'][0]['signature'];
+
+          // 2. Get the full transaction details using the signature.
+          $tx_details_response = $transaction_client->getTransaction($signature, 'jsonParsed');
+          $tx_details = $tx_details_response['result'];
+          
+          if (empty($tx_details) || !empty($tx_details['meta']['err'])) {
+              return FALSE; // Transaction not found or has failed.
+          }
+
+          // 3. Analyze the transaction for maximum security.
+          // We look for a system program transfer instruction.
+          $lamports_expected = $expected_amount * 1_000_000_000;
+          $transfer_found_and_valid = false;
+
+          foreach ($tx_details['transaction']['message']['instructions'] as $instruction) {
+              if ($instruction['programId'] === '11111111111111111111111111111111') { // System Program
+                  if ($instruction['parsed']['type'] === 'transfer') {
+                      $info = $instruction['parsed']['info'];
+                      // We check if the destination and amount are correct.
+                      if ($info['destination'] === $merchant_wallet && $info['lamports'] == $lamports_expected) {
+                          $transfer_found_and_valid = true;
+                          break; // Valid instruction found, breaking the loop.
+                      }
+                  }
+              }
+          }
+
+          return $transfer_found_and_valid;
+      }
+      catch (\Exception $e) {
+          // Log the error if necessary, but return false on any exception.
+          return FALSE;
+      }
   }
 }

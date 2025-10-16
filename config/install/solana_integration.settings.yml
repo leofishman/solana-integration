@@ -12,3 +12,4 @@ endpoints:
     url: 'https://api.testnet.solana.com'
     enabled: false
 default_endpoint: 'mainnet'
+merchant_wallet_address: ''

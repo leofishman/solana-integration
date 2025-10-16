@@ -11,12 +11,12 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
  * Defines the 'solana_wallet' field type.
  *
  * @FieldType(
- *  id = "solana_wallet",
- *  label = @Translation("Solana Wallet Address"),
- *  description = @Translation("Stores a Solana blockchain wallet address."),
- *  category = @Translation("Web3"),
- *  default_widget = "solana_wallet_default",
- *  default_formatter = "solana_wallet_link"
+ * id = "solana_wallet",
+ * label = @Translation("Solana Wallet Address"),
+ * description = @Translation("Stores a Solana blockchain wallet address."),
+ * category = "Web3",
+ * default_widget = "solana_wallet_default",
+ * default_formatter = "solana_wallet_link"
  * )
  */
 class SolanaWalletItem extends FieldItemBase {
