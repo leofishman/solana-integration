@@ -4,6 +4,7 @@ namespace Drupal\solana_pay\Plugin\Commerce\PaymentGateway;
 
 use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\PaymentGatewayBase;
 use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\ManualPaymentGatewayInterface;
+use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\HasPaymentInstructionsInterface;
 use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\SupportsRefundsInterface;
 use Drupal\commerce_payment\Entity\PaymentInterface;
 use Drupal\commerce_price\Price;
@@ -49,6 +50,8 @@ class SolanaPayManual extends PaymentGatewayBase implements ManualPaymentGateway
    * {@inheritdoc}
    */
   public function buildPaymentInstructions(PaymentInterface $payment) {
+    \Drupal::logger('solana_pay')->notice('Building payment instructions for payment @id', ['@id' => $payment->id()]);
+    
     $order = $payment->getOrder();
     $order_id = $order->id();
     $amount = (float) $payment->getAmount()->getNumber();
@@ -62,14 +65,17 @@ class SolanaPayManual extends PaymentGatewayBase implements ManualPaymentGateway
       if ($payment_request_url && !empty($reference)) {
         $payment->setRemoteId($reference);
         $payment->save();
+        \Drupal::logger('solana_pay')->notice('Generated new reference: @ref', ['@ref' => $reference]);
       }
     }
     else {
       // Regenerate URL from existing reference
       $payment_request_url = $this->solanaClient->generatePaymentRequest($amount, $label, $message, $reference);
+      \Drupal::logger('solana_pay')->notice('Using existing reference: @ref', ['@ref' => $reference]);
     }
 
     if (!$payment_request_url) {
+      \Drupal::logger('solana_pay')->error('Failed to generate payment URL');
       return [
         '#markup' => $this->t('Solana Pay is not configured. Please contact support.'),
       ];
@@ -99,9 +105,17 @@ class SolanaPayManual extends PaymentGatewayBase implements ManualPaymentGateway
    * {@inheritdoc}
    */
   public function createPayment(PaymentInterface $payment, $received = FALSE) {
+    \Drupal::logger('solana_pay')->notice('createPayment called for order @order, received: @received', [
+      '@order' => $payment->getOrder()->id(),
+      '@received' => $received ? 'true' : 'false',
+    ]);
     $this->assertPaymentState($payment, ['new']);
     $payment->state = $received ? 'completed' : 'pending';
     $payment->save();
+    \Drupal::logger('solana_pay')->notice('Payment @id created with state @state', [
+      '@id' => $payment->id(),
+      '@state' => $payment->getState()->getId(),
+    ]);
   }
 
   /**
