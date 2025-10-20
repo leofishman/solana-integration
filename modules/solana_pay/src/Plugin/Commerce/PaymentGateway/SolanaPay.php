@@ -25,9 +25,13 @@ use Drupal\Core\Logger\LoggerChannelFactoryInterface;
  * @CommercePaymentGateway(
  *   id = "solana_pay",
  *   label = "Solana Pay",
- *   display_label = "Solana Pay",
- *   payment_method_types = {"solana_pay"},
- *   forms = {},
+ *   display_label = "Pay with Solana",
+ *   modes = {
+ *     "live" = @Translation("Live"),
+ *   },
+ *   forms = {
+ *     "offsite-payment" = "Drupal\commerce_payment\PluginForm\OffsiteRedirect\PaymentOffsiteForm",
+ *   },
  * )
  */
 class SolanaPay extends OffsitePaymentGatewayBase implements SupportsRefundsInterface, ContainerFactoryPluginInterface
