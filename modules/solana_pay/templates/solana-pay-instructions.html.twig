@@ -1,0 +1,18 @@
+<div class="solana-pay-instructions-wrapper">
+  <div class="solana-pay-instructions">
+    <h3>{{ 'Complete your payment'|t }}</h3>
+    <p>{{ 'Scan the QR code with your Solana wallet or click the button below to open your wallet.'|t }}</p>
+  </div>
+
+  <div id="solana-pay-qr" class="solana-pay-qr"></div>
+
+  <div class="solana-pay-wallet-link">
+    <a id="solana-pay-open" href="{{ payment_url }}" class="button button--primary">
+      {{ 'Open in Wallet'|t }}
+    </a>
+  </div>
+
+  <div id="solana-pay-status" class="solana-pay-status">
+    {{ 'Waiting for payment...'|t }}
+  </div>
+</div>

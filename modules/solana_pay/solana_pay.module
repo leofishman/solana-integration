@@ -1,0 +1,22 @@
+<?php
+
+/**
+ * @file
+ * Contains solana_pay.module.
+ */
+
+/**
+ * Implements hook_theme().
+ */
+function solana_pay_theme($existing, $type, $theme, $path) {
+  return [
+    'solana_pay_instructions' => [
+      'variables' => [
+        'payment_url' => NULL,
+        'amount' => NULL,
+        'payment_id' => NULL,
+      ],
+      'template' => 'solana-pay-instructions',
+    ],
+  ];
+}
