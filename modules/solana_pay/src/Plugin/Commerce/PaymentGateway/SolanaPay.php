@@ -30,7 +30,7 @@ use Drupal\Core\Logger\LoggerChannelFactoryInterface;
  *     "live" = @Translation("Live"),
  *   },
  *   forms = {
- *     "offsite-payment" = "Drupal\commerce_payment\PluginForm\OffsiteRedirect\PaymentOffsiteForm",
+ *     "offsite-payment" = "Drupal\solana_pay\PluginForm\SolanaPayForm",
  *   },
  * )
  */
@@ -159,9 +159,17 @@ class SolanaPay extends OffsitePaymentGatewayBase implements SupportsRefundsInte
     }
 
     /**
-     * {@inheritdoc}
+     * Builds the Solana Pay payment page with QR code.
+     *
+     * @param \Drupal\commerce_payment\Entity\PaymentInterface $payment
+     *   The payment entity.
+     * @param \Drupal\Core\Form\FormStateInterface $form_state
+     *   The form state.
+     *
+     * @return array
+     *   The form render array.
      */
-    public function buildRedirectForm(PaymentInterface $payment, Request $request, FormStateInterface $form_state)
+    public function buildPaymentPage(PaymentInterface $payment, FormStateInterface $form_state)
     {
         $order = $payment->getOrder();
         $order_id = $order->id();
