@@ -140,7 +140,7 @@ class SolanaClient {
    * @return string|null
    * The generated solana: URL, or null if the merchant address is not configured.
    */
-  public function generatePaymentRequest(float $amount, string $label, string $message, string &$reference_key): ?string
+  public function generatePaymentRequest(float $amount, string $label, string $message, ?string &$reference_key): ?string
   {
     $config = $this->configFactory->get('solana_integration.settings');
     $recipient = $config->get('merchant_wallet_address');

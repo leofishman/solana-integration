@@ -41,17 +41,10 @@ class SolanaPayCheckout extends PaymentCheckoutPaneBase {
    * {@inheritdoc}
    */
   public function isVisible() {
-    // Only show this pane if Solana Pay is selected as the payment gateway.
-    if ($this->order->get('payment_gateway')->isEmpty()) {
-      return FALSE;
-    }
-
-    $payment_gateway = $this->order->get('payment_gateway')->entity;
-    if (!$payment_gateway) {
-      return FALSE;
-    }
-
-    return $payment_gateway->getPluginId() === 'solana_pay';
+    // This pane is deprecated - we now use ManualPaymentGateway
+    // which shows instructions on the order completion page.
+    // Keep this hidden so it doesn't interfere.
+    return FALSE;
   }
 
   /**

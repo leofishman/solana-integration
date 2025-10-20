@@ -107,8 +107,55 @@ class SolanaPayManual extends PaymentGatewayBase implements ManualPaymentGateway
   /**
    * {@inheritdoc}
    */
+  public function receivePayment(PaymentInterface $payment, ?Price $amount = NULL) {
+    $this->assertPaymentState($payment, ['pending']);
+    // If not specified, use the entire amount.
+    $amount = $amount ?: $payment->getAmount();
+    $payment->state = 'completed';
+    $payment->setAmount($amount);
+    $payment->save();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function voidPayment(PaymentInterface $payment) {
+    $this->assertPaymentState($payment, ['pending']);
+    $payment->state = 'voided';
+    $payment->save();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function canVoidPayment(PaymentInterface $payment) {
+    return $payment->getState()->getId() === 'pending';
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function buildPaymentOperations(PaymentInterface $payment) {
-    return [];
+    $operations = [];
+    $operations['receive'] = [
+      'title' => $this->t('Receive'),
+      'page_title' => $this->t('Receive payment'),
+      'plugin_form' => 'receive-payment',
+      'access' => $payment->getState()->getId() === 'pending',
+    ];
+    $operations['void'] = [
+      'title' => $this->t('Void'),
+      'page_title' => $this->t('Void payment'),
+      'plugin_form' => 'void-payment',
+      'access' => $this->canVoidPayment($payment),
+    ];
+    $operations['refund'] = [
+      'title' => $this->t('Refund'),
+      'page_title' => $this->t('Refund payment'),
+      'plugin_form' => 'refund-payment',
+      'access' => $this->canRefundPayment($payment),
+    ];
+    return $operations;
   }
 
   /**
