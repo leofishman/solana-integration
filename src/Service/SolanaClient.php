@@ -30,6 +30,13 @@ class SolanaClient {
    */
   protected string $endpoint;
 
+  /**
+   * The last converted SOL amount.
+   *
+   * @var float|null
+   */
+  protected ?float $lastConvertedAmount = NULL;
+
 
   /**
    * Constructs a new SolanaClient object.
@@ -125,11 +132,69 @@ class SolanaClient {
     return "solana:" . $recipient . "?" . $url_params;
   }
 
+  /**
+   * Converts fiat currency to SOL using CoinGecko API.
+   *
+   * @param float $amount
+   *   The amount in fiat currency.
+   * @param string $currency_code
+   *   The currency code (e.g., "USD", "EUR").
+   *
+   * @return float|null
+   *   The amount in SOL, or null on error.
+   */
+  protected function convertToSol(float $amount, string $currency_code): ?float {
+    try {
+      $currency_lower = strtolower($currency_code);
+      $url = "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies={$currency_lower}";
+      
+      $context = stream_context_create([
+        'http' => [
+          'timeout' => 5,
+          'header' => "Accept: application/json\r\n",
+        ],
+      ]);
+      
+      $response = @file_get_contents($url, false, $context);
+      
+      if ($response === FALSE) {
+        \Drupal::logger('solana_integration')->error('Failed to fetch SOL exchange rate from CoinGecko');
+        return NULL;
+      }
+      
+      $data = json_decode($response, TRUE);
+      
+      if (isset($data['solana'][$currency_lower])) {
+        $sol_price = (float) $data['solana'][$currency_lower];
+        return $amount / $sol_price;
+      }
+      
+      \Drupal::logger('solana_integration')->error('Currency @currency not found in CoinGecko response', ['@currency' => $currency_code]);
+      return NULL;
+    }
+    catch (\Exception $e) {
+      \Drupal::logger('solana_integration')->error('Error converting currency: @message', ['@message' => $e->getMessage()]);
+      return NULL;
+    }
+  }
+
+  /**
+   * Gets the last converted SOL amount.
+   *
+   * @return float|null
+   *   The last converted SOL amount.
+   */
+  public function getLastConvertedAmount(): ?float {
+    return $this->lastConvertedAmount;
+  }
+
     /**
    * Generates a Solana Pay payment request URL.
    *
    * @param float $amount
-   * The amount of SOL to request.
+   * The amount in fiat currency.
+   * @param string $currency_code
+   * The currency code (e.g., "USD", "EUR").
    * @param string $label
    * The label for the payment (e.g., "My Online Store").
    * @param string $message
@@ -140,7 +205,7 @@ class SolanaClient {
    * @return string|null
    * The generated solana: URL, or null if the merchant address is not configured.
    */
-  public function generatePaymentRequest(float $amount, string $label, string $message, ?string &$reference_key): ?string
+  public function generatePaymentRequest(float $amount, string $currency_code, string $label, string $message, ?string &$reference_key): ?string
   {
     $config = $this->configFactory->get('solana_integration.settings');
     $recipient = $config->get('merchant_wallet_address');
@@ -154,6 +219,19 @@ class SolanaClient {
       return NULL;
     }
 
+    // Convert fiat currency to SOL
+    $sol_amount = $this->convertToSol($amount, $currency_code);
+    if ($sol_amount === NULL) {
+      \Drupal::logger('solana_integration')->error('Failed to convert @amount @currency to SOL', [
+        '@amount' => $amount,
+        '@currency' => $currency_code,
+      ]);
+      return NULL;
+    }
+
+    // Store the converted amount for display purposes
+    $this->lastConvertedAmount = $sol_amount;
+
     // CRITICAL: Each payment request MUST have a unique reference
     // to be able to track it on the blockchain without ambiguity.
     // We generate a new random keypair to use as the reference.
@@ -164,7 +242,7 @@ class SolanaClient {
     $reference_key = $base58->encode($publicKey);
 
 
-    return $this->buildPaymentRequestUrl($recipient, $amount, '', $reference_key, $label, $message);
+    return $this->buildPaymentRequestUrl($recipient, $sol_amount, '', $reference_key, $label, $message);
   }
 
   /**

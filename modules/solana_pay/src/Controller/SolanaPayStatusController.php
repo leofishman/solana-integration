@@ -82,6 +82,15 @@ class SolanaPayStatusController extends ControllerBase {
       $commerce_payment->setState('completed');
       $commerce_payment->save();
       
+      // Trigger order paid event to update order state
+      $order = $commerce_payment->getOrder();
+      $order->save();
+      
+      \Drupal::logger('solana_pay')->notice('Payment @id confirmed for order @order', [
+        '@id' => $commerce_payment->id(),
+        '@order' => $order->id(),
+      ]);
+      
       return new JsonResponse([
         'status' => 'confirmed',
         'message' => $this->t('Payment confirmed on blockchain.'),

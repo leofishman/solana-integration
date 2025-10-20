@@ -64,11 +64,23 @@
         .then(response => response.json())
         .then(data => {
           if (data.status === 'confirmed') {
-            statusMessage.textContent = Drupal.t('Payment confirmed! Redirecting...');
-            statusMessage.className = 'solana-pay-status success';
+            statusMessage.innerHTML = '<div class="solana-pay-status__icon">✅</div>' +
+              '<div class="solana-pay-status__message">' + Drupal.t('Payment Confirmed!') + '</div>' +
+              '<div class="solana-pay-status__help">' + Drupal.t('Your payment has been received. The page will reload in a moment.') + '</div>';
+            statusMessage.className = 'solana-pay-status solana-pay-status--success';
+            
+            // Hide the QR and wallet button
+            if (qrContainer) qrContainer.style.display = 'none';
+            if (walletLink) walletLink.parentElement.style.display = 'none';
+            
+            // Redirect to checkout completion page
             setTimeout(function() {
-              window.location.href = config.returnUrl;
-            }, 1000);
+              if (config.completionUrl) {
+                window.location.href = config.completionUrl;
+              } else {
+                window.location.reload();
+              }
+            }, 2000);
           }
           else if (data.status === 'pending') {
             statusMessage.textContent = Drupal.t('Waiting for payment confirmation... (@count/@max)', {
@@ -93,15 +105,18 @@
 
       setTimeout(pollStatus, pollInterval);
 
-      const manualCheckButton = document.createElement('button');
-      manualCheckButton.textContent = Drupal.t("I've paid - Check now");
-      manualCheckButton.className = 'button solana-pay-manual-check';
-      manualCheckButton.onclick = function(e) {
-        e.preventDefault();
-        pollCount = 0;
-        pollStatus();
-      };
-      statusMessage.parentNode.insertBefore(manualCheckButton, statusMessage.nextSibling);
+      // Only create manual check button if it doesn't already exist
+      if (!document.querySelector('.solana-pay-manual-check')) {
+        const manualCheckButton = document.createElement('button');
+        manualCheckButton.textContent = Drupal.t("I've paid - Check now");
+        manualCheckButton.className = 'button solana-pay-manual-check';
+        manualCheckButton.onclick = function(e) {
+          e.preventDefault();
+          pollCount = 0;
+          pollStatus();
+        };
+        statusMessage.parentNode.insertBefore(manualCheckButton, statusMessage.nextSibling);
+      }
     }
   };
 
