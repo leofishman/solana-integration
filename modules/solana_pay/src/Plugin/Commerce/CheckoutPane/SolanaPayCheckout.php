@@ -58,13 +58,59 @@ class SolanaPayCheckout extends PaymentCheckoutPaneBase {
    * {@inheritdoc}
    */
   public function buildPaneForm(array $pane_form, FormStateInterface $form_state, array &$complete_form) {
-    $payment_gateway = $this->order->get('payment_gateway')->entity;
+    // Check if payment gateway is set on the order
+    if ($this->order->get('payment_gateway')->isEmpty()) {
+      // Try to auto-assign Solana Pay gateway if it's the only one
+      $gateway_storage = $this->entityTypeManager->getStorage('commerce_payment_gateway');
+      $gateways = $gateway_storage->loadByProperties(['status' => TRUE]);
+      
+      $solana_gateway = NULL;
+      foreach ($gateways as $gateway) {
+        if ($gateway->getPluginId() === 'solana_pay') {
+          $solana_gateway = $gateway;
+          break;
+        }
+      }
+      
+      if ($solana_gateway) {
+        $this->order->set('payment_gateway', $solana_gateway);
+        $this->order->save();
+        
+        // Reload the order to ensure the gateway is set
+        $order_storage = $this->entityTypeManager->getStorage('commerce_order');
+        $this->order = $order_storage->load($this->order->id());
+      }
+      else {
+        $pane_form['error'] = [
+          '#markup' => $this->t('Solana Pay gateway not found. Please configure it at /admin/commerce/config/payment-gateways'),
+        ];
+        return $pane_form;
+      }
+    }
+
+    // Reload the payment gateway entity to ensure it's loaded
+    $payment_gateway = NULL;
+    if (!$this->order->get('payment_gateway')->isEmpty()) {
+      $gateway_id = $this->order->get('payment_gateway')->target_id;
+      if ($gateway_id) {
+        $gateway_storage = $this->entityTypeManager->getStorage('commerce_payment_gateway');
+        $payment_gateway = $gateway_storage->load($gateway_id);
+      }
+    }
     
     if (!$payment_gateway) {
       $pane_form['error'] = [
-        '#markup' => $this->t('Payment gateway not found.'),
+        '#markup' => $this->t('Payment gateway could not be loaded. Gateway ID: @id', [
+          '@id' => $this->order->get('payment_gateway')->isEmpty() ? 'empty' : $this->order->get('payment_gateway')->target_id,
+        ]),
       ];
       return $pane_form;
+    }
+
+    // Verify it's actually a Solana Pay gateway
+    if ($payment_gateway->getPluginId() !== 'solana_pay') {
+      // Not our gateway, hide this pane
+      return [];
     }
 
     // Create or load the payment.
@@ -78,13 +124,50 @@ class SolanaPayCheckout extends PaymentCheckoutPaneBase {
       $payment = reset($payments);
     }
     else {
-      $payment = $payment_storage->create([
-        'state' => 'new',
-        'amount' => $this->order->getTotalPrice(),
-        'payment_gateway' => $payment_gateway->id(),
-        'order_id' => $this->order->id(),
-      ]);
-      $payment->save();
+      // Debug: Check the gateway before creating payment
+      $gateway_id = $payment_gateway->id();
+      
+      // Verify the gateway can be reloaded
+      $test_load = $gateway_storage->load($gateway_id);
+      if (!$test_load) {
+        $pane_form['error'] = [
+          '#markup' => $this->t('Gateway exists but cannot be reloaded. ID: @id', ['@id' => $gateway_id]),
+        ];
+        return $pane_form;
+      }
+      
+      // Use the gateway plugin to create the payment
+      $payment_gateway_plugin = $payment_gateway->getPlugin();
+      
+      // Create payment entity first without saving
+      try {
+        $payment = $payment_storage->create([
+          'state' => 'new',
+          'amount' => $this->order->getTotalPrice(),
+          'payment_gateway' => $gateway_id,
+          'order_id' => $this->order->id(),
+        ]);
+      }
+      catch (\Exception $e) {
+        $pane_form['error'] = [
+          '#markup' => $this->t('Failed to create payment entity: @error. Gateway ID: @gw', [
+            '@error' => $e->getMessage(),
+            '@gw' => $gateway_id,
+          ]),
+        ];
+        return $pane_form;
+      }
+      
+      // Let the gateway plugin handle the payment creation
+      try {
+        $payment_gateway_plugin->createPayment($payment, []);
+      }
+      catch (\Exception $e) {
+        $pane_form['error'] = [
+          '#markup' => $this->t('Gateway plugin failed to create payment: @error', ['@error' => $e->getMessage()]),
+        ];
+        return $pane_form;
+      }
     }
 
     $order_id = $this->order->id();
