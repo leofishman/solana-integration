@@ -1,0 +1,33 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the Solana Pay module.
+ */
+
+use Drupal\commerce_payment\Entity\PaymentGateway;
+
+/**
+ * Implements hook_install().
+ */
+function solana_pay_install() {
+  // Create the Solana Pay payment gateway if it doesn't exist.
+  $gateway = PaymentGateway::load('solana_pay');
+  
+  if (!$gateway) {
+    $gateway = PaymentGateway::create([
+      'id' => 'solana_pay',
+      'label' => 'Solana Pay',
+      'plugin' => 'solana_pay',
+      'configuration' => [
+        'display_label' => 'Pay with Solana',
+        'mode' => 'live',
+      ],
+      'status' => TRUE,
+      'weight' => 0,
+    ]);
+    $gateway->save();
+    
+    \Drupal::messenger()->addStatus(t('Solana Pay payment gateway has been created. Remember to assign it to your store at /admin/commerce/config/stores'));
+  }
+}
