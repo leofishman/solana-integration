@@ -96,7 +96,7 @@ class SolanaClient {
    * @param float $amount
    *   The amount to pay.
    * @param string $spl_token
-   *   The SPL token address.
+   *   The SPL token address (optional, omit for native SOL).
    * @param string $reference
    *   The reference ID.
    * @param string $label
@@ -108,15 +108,20 @@ class SolanaClient {
    *   The Solana Pay URL.
    */
   public function buildPaymentRequestUrl(string $recipient, float $amount, string $spl_token, string $reference, string $label, string $message): string {
-    $url_params = http_build_query([
-      'recipient' => $recipient,
-      'amount' => $amount,
-      'spl-token' => $spl_token,
+    $amount_str = rtrim(rtrim(number_format($amount, 9, '.', ''), '0'), '.');
+    
+    $params = [
+      'amount' => $amount_str,
       'reference' => $reference,
       'label' => $label,
       'message' => $message,
-    ]);
+    ];
 
+    if (!empty($spl_token)) {
+      $params['spl-token'] = $spl_token;
+    }
+
+    $url_params = http_build_query($params);
     return "solana:" . $recipient . "?" . $url_params;
   }
 
@@ -159,9 +164,7 @@ class SolanaClient {
     $reference_key = $base58->encode($publicKey);
 
 
-    // move code to BuildPaymentRequestUrl
-
-    return $this->buildPaymentRequestUrl($recipient, $amount, 'So11111111111111111111111111111111111111112', $reference_key, $label, $message);
+    return $this->buildPaymentRequestUrl($recipient, $amount, '', $reference_key, $label, $message);
   }
 
   /**
