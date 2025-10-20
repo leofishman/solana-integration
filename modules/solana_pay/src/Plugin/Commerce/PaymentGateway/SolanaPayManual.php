@@ -8,11 +8,14 @@ use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\HasPaymentInstruction
 use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\SupportsRefundsInterface;
 use Drupal\commerce_payment\Entity\PaymentInterface;
 use Drupal\commerce_price\Price;
+use Drupal\commerce_order\Entity\OrderInterface;
 use Drupal\solana_integration\Service\SolanaClient;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 
 /**
  * Provides the Solana Pay payment gateway.
@@ -28,7 +31,7 @@ use Drupal\Core\Url;
  *   requires_billing_information = FALSE,
  * )
  */
-class SolanaPayManual extends PaymentGatewayBase implements ManualPaymentGatewayInterface, SupportsRefundsInterface, ContainerFactoryPluginInterface {
+class SolanaPayManual extends PaymentGatewayBase implements ManualPaymentGatewayInterface, SupportsRefundsInterface, ContainerFactoryPluginInterface, HasPaymentInstructionsInterface {
 
   /**
    * The Solana client.
@@ -58,9 +61,10 @@ class SolanaPayManual extends PaymentGatewayBase implements ManualPaymentGateway
     $label = 'Payment for order #' . $order_id;
     $message = 'Order #' . $order_id;
 
+    $currency_code = $payment->getAmount()->getCurrencyCode();
     $reference = $payment->getRemoteId();
     if (empty($reference)) {
-      $payment_request_url = $this->solanaClient->generatePaymentRequest($amount, $label, $message, $reference);
+      $payment_request_url = $this->solanaClient->generatePaymentRequest($amount, $currency_code, $label, $message, $reference);
       
       if ($payment_request_url && !empty($reference)) {
         $payment->setRemoteId($reference);
@@ -70,7 +74,7 @@ class SolanaPayManual extends PaymentGatewayBase implements ManualPaymentGateway
     }
     else {
       // Regenerate URL from existing reference
-      $payment_request_url = $this->solanaClient->generatePaymentRequest($amount, $label, $message, $reference);
+      $payment_request_url = $this->solanaClient->generatePaymentRequest($amount, $currency_code, $label, $message, $reference);
       \Drupal::logger('solana_pay')->notice('Using existing reference: @ref', ['@ref' => $reference]);
     }
 
@@ -81,10 +85,14 @@ class SolanaPayManual extends PaymentGatewayBase implements ManualPaymentGateway
       ];
     }
 
+    $sol_amount = $this->solanaClient->getLastConvertedAmount();
+
     $instructions = [
       '#theme' => 'solana_pay_instructions',
       '#payment_url' => $payment_request_url,
-      '#amount' => $amount,
+      '#amount' => $sol_amount,
+      '#currency' => $currency_code,
+      '#original_amount' => $amount,
       '#payment_id' => $payment->id(),
       '#attached' => [
         'library' => ['solana_pay/checkout'],
@@ -116,6 +124,23 @@ class SolanaPayManual extends PaymentGatewayBase implements ManualPaymentGateway
       '@id' => $payment->id(),
       '@state' => $payment->getState()->getId(),
     ]);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function onReturn(OrderInterface $order, Request $request) {
+    // Redirect to the dedicated payment page
+    $payments = $this->entityTypeManager->getStorage('commerce_payment')->loadByProperties([
+      'order_id' => $order->id(),
+      'state' => 'pending',
+    ]);
+    
+    if (!empty($payments)) {
+      $payment = reset($payments);
+      $url = Url::fromRoute('solana_pay.payment', ['commerce_payment' => $payment->id()]);
+      return new RedirectResponse($url->toString());
+    }
   }
 
   /**
