@@ -40,12 +40,21 @@ class SolanaPayManual extends PaymentGatewayBase implements ManualPaymentGateway
    */
   protected $solanaClient;
 
+
+  /**
+   * The config factory.
+   *
+   * @var \Drupal\Core\Config\ConfigFactoryInterface
+   */
+  protected $configFactory;
+
   /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
     $instance = parent::create($container, $configuration, $plugin_id, $plugin_definition);
     $instance->solanaClient = $container->get('solana_integration.client');
+    $instance->configFactory = $container->get('config.factory');
     return $instance;
   }
 
@@ -94,6 +103,7 @@ class SolanaPayManual extends PaymentGatewayBase implements ManualPaymentGateway
       '#currency' => $currency_code,
       '#original_amount' => $amount,
       '#payment_id' => $payment->id(),
+      '#merchant_address' => $this->getMerchantWalletAddress(),
       '#attached' => [
         'library' => ['solana_pay/checkout'],
         'drupalSettings' => [
@@ -217,5 +227,17 @@ class SolanaPayManual extends PaymentGatewayBase implements ManualPaymentGateway
     $payment->setRefundedAmount($new_refunded_amount);
     $payment->save();
   }
+
+      /**
+     * Gets the merchant wallet address.
+     *
+     * @return string
+     *   The merchant wallet address.
+     */
+    public function getMerchantWalletAddress()
+    {
+        $config = $this->configFactory->get('solana_integration.settings');
+        return $config->get('merchant_wallet_address') ?? '';
+    }
 
 }

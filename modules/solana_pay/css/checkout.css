@@ -23,6 +23,71 @@
   border-radius: 8px;
 }
 
+.solana-pay-address {
+  margin: 1.5rem auto;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  max-width: 600px;
+}
+
+.solana-pay-address label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  text-align: left;
+}
+
+.solana-pay-address__wrapper {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.solana-pay-address__value {
+  flex: 1;
+  padding: 0.75rem;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.85rem;
+  word-break: break-all;
+  text-align: left;
+}
+
+.solana-pay-address__wrapper button {
+  padding: 0.75rem 1.25rem;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-weight: bold;
+  transition: background 0.2s;
+}
+
+.solana-pay-address__wrapper button:hover {
+  background: #5a6268;
+}
+
+.solana-pay-address__feedback {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  min-height: 1.2rem;
+  text-align: left;
+}
+
+.solana-pay-address__feedback--success {
+  color: #28a745;
+}
+
+.solana-pay-address__feedback--error {
+  color: #dc3545;
+}
+
 .solana-pay-wallet-link {
   margin: 1.5rem 0;
 }
