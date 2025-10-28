@@ -119,10 +119,19 @@ class SolanaClient {
     
     $params = [
       'amount' => $amount_str,
-      'reference' => $reference,
-      'label' => $label,
-      'message' => $message,
     ];
+
+    if (!empty($reference)) {
+      $params['reference'] = $reference;
+    }
+
+    if (!empty($label)) {
+      $params['label'] = $label;
+    }
+
+    if (!empty($message)) {
+      $params['message'] = $message;
+    }
 
     if (!empty($spl_token)) {
       $params['spl-token'] = $spl_token;
@@ -134,7 +143,11 @@ class SolanaClient {
     }
 
     $url_params = http_build_query($params);
-    return "solana:" . $recipient . "?" . $url_params;
+    $full_url = "solana:" . $recipient . "?" . $url_params;
+    
+    \Drupal::logger('solana_pay')->info('Generated Solana Pay URL: @url', ['@url' => $full_url]);
+    
+    return $full_url;
   }
 
   /**
