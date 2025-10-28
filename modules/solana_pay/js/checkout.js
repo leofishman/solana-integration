@@ -16,9 +16,33 @@
       const qrContainer = document.getElementById('solana-pay-qr');
       const statusMessage = document.getElementById('solana-pay-status');
       const walletLink = document.getElementById('solana-pay-open');
+      const copyButton = document.getElementById('copy-address-btn');
+      const addressElement = document.getElementById('merchant-address');
+      const copyFeedback = document.getElementById('copy-feedback');
 
       if (!qrContainer || !statusMessage) {
         return;
+      }
+
+      // Handle copy address button
+      if (copyButton && addressElement) {
+        copyButton.addEventListener('click', function() {
+          const address = addressElement.textContent;
+          
+          navigator.clipboard.writeText(address).then(function() {
+            copyFeedback.textContent = Drupal.t('Address copied!');
+            copyFeedback.className = 'solana-pay-address__feedback solana-pay-address__feedback--success';
+            
+            setTimeout(function() {
+              copyFeedback.textContent = '';
+              copyFeedback.className = 'solana-pay-address__feedback';
+            }, 2000);
+          }).catch(function(err) {
+            copyFeedback.textContent = Drupal.t('Failed to copy address');
+            copyFeedback.className = 'solana-pay-address__feedback solana-pay-address__feedback--error';
+            console.error('Failed to copy: ', err);
+          });
+        });
       }
 
       if (typeof QRCode === 'undefined') {

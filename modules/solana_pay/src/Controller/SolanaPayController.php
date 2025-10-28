@@ -76,6 +76,8 @@ class SolanaPayController extends ControllerBase {
     }
 
     $sol_amount = $this->solanaClient->getLastConvertedAmount();
+    $config = $this->config('solana_integration.settings');
+    $merchant_address = $config->get('merchant_wallet_address');
 
     return [
       '#theme' => 'solana_pay_instructions',
@@ -83,6 +85,7 @@ class SolanaPayController extends ControllerBase {
       '#amount' => $sol_amount,
       '#currency' => $currency_code,
       '#original_amount' => $amount,
+      '#merchant_address' => $merchant_address,
       '#payment_id' => $commerce_payment->id(),
       '#order_id' => $order_id,
       '#attached' => [

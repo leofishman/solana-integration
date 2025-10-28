@@ -128,8 +128,32 @@ class SolanaClient {
       $params['spl-token'] = $spl_token;
     }
 
+    $cluster = $this->getClusterName();
+    if ($cluster) {
+      $params['cluster'] = $cluster;
+    }
+
     $url_params = http_build_query($params);
     return "solana:" . $recipient . "?" . $url_params;
+  }
+
+  /**
+   * Gets the cluster name for Solana Pay URLs based on the configured endpoint.
+   *
+   * @return string|null
+   *   The cluster name (mainnet-beta, devnet, testnet) or null for custom endpoints.
+   */
+  protected function getClusterName(): ?string {
+    $config = $this->configFactory->get('solana_integration.settings');
+    $default_endpoint_key = $config->get('default_endpoint') ?? 'mainnet';
+
+    $cluster_map = [
+      'mainnet' => 'mainnet-beta',
+      'devnet' => 'devnet',
+      'testnet' => 'testnet',
+    ];
+
+    return $cluster_map[$default_endpoint_key] ?? NULL;
   }
 
   /**

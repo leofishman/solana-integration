@@ -18,6 +18,19 @@
 
   <div id="solana-pay-qr" class="solana-pay-qr"></div>
 
+  {% if merchant_address %}
+    <div class="solana-pay-address">
+      <label>{{ 'Recipient Address:'|t }}</label>
+      <div class="solana-pay-address__wrapper">
+        <code id="merchant-address" class="solana-pay-address__value">{{ merchant_address }}</code>
+        <button type="button" id="copy-address-btn" class="button button--small" title="{{ 'Copy address to clipboard'|t }}">
+          {{ 'Copy'|t }}
+        </button>
+      </div>
+      <div id="copy-feedback" class="solana-pay-address__feedback"></div>
+    </div>
+  {% endif %}
+
   <div class="solana-pay-wallet-link">
     <a id="solana-pay-open" href="{{ payment_url }}" class="button button--primary">
       {{ 'Open in Wallet'|t }}
