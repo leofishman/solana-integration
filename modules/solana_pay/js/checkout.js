@@ -45,6 +45,63 @@
         });
       }
 
+      // Handle manual transaction signature verification
+      const verifyButton = document.getElementById('verify-signature-btn');
+      const signatureInput = document.getElementById('transaction-signature');
+      const verifyFeedback = document.getElementById('verify-feedback');
+
+      if (verifyButton && signatureInput && verifyFeedback) {
+        verifyButton.addEventListener('click', function() {
+          const signature = signatureInput.value.trim();
+          
+          if (!signature) {
+            verifyFeedback.textContent = Drupal.t('Please enter a transaction signature');
+            verifyFeedback.className = 'verify-feedback verify-feedback--error';
+            return;
+          }
+
+          verifyButton.disabled = true;
+          verifyButton.textContent = Drupal.t('Verifying...');
+          verifyFeedback.textContent = Drupal.t('Checking transaction on blockchain...');
+          verifyFeedback.className = 'verify-feedback verify-feedback--pending';
+
+          fetch(config.statusUrl + '?signature=' + encodeURIComponent(signature), {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: {
+              'Accept': 'application/json'
+            }
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.status === 'confirmed') {
+              verifyFeedback.textContent = Drupal.t('Payment verified! Redirecting...');
+              verifyFeedback.className = 'verify-feedback verify-feedback--success';
+              
+              statusMessage.innerHTML = '<div class="solana-pay-status__icon">✅</div>' +
+                '<div class="solana-pay-status__message">' + Drupal.t('Payment Confirmed!') + '</div>';
+              statusMessage.className = 'solana-pay-status solana-pay-status--success';
+              
+              setTimeout(function() {
+                window.location.href = config.completionUrl;
+              }, 2000);
+            } else {
+              verifyFeedback.textContent = data.message || Drupal.t('Transaction not found or invalid. Please check the signature and network.');
+              verifyFeedback.className = 'verify-feedback verify-feedback--error';
+              verifyButton.disabled = false;
+              verifyButton.textContent = Drupal.t('Verify Payment');
+            }
+          })
+          .catch(error => {
+            console.error('Verification error:', error);
+            verifyFeedback.textContent = Drupal.t('Verification failed. Please try again.');
+            verifyFeedback.className = 'verify-feedback verify-feedback--error';
+            verifyButton.disabled = false;
+            verifyButton.textContent = Drupal.t('Verify Payment');
+          });
+        });
+      }
+
       if (typeof QRCode === 'undefined') {
         console.error('QRCode library not loaded');
         statusMessage.textContent = 'Error: QR code library not available.';
